@@ -1,3 +1,21 @@
 <resources>
     <string name="app_name">CheckinApp</string>
+
+    <string name="title_portal_staff">Portal do Staff</string>
+    <string name="hint_email">E-mail do funcionário</string>
+    <string name="hint_password">Senha</string>
+    <string name="btn_enter">Entrar</string>
+
+    <string name="title_search_participant">Buscar Participante</string>
+    <string name="hint_cpf_client">Digite o CPF do cliente</string>
+    <string name="btn_search_checkin">Buscar / Check-in</string>
+
+    <string name="title_new_register">Novo Cadastro</string>
+    <string name="msg_user_not_found">Usuário não encontrado. Realize o cadastro rápido.</string>
+    <string name="hint_cpf">CPF</string>
+    <string name="hint_email_client">E-mail do cliente</string>
+    <string name="btn_register_continue">Cadastrar e Continuar</string>
+
+    <string name="btn_new_event_enrollment">Inscrever em Novo Evento</string>
+    <string name="label_current_enrollments">Inscrições Atuais (Toque para Check-in):</string>
 </resources>

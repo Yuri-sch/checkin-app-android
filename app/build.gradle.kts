@@ -55,4 +55,6 @@ dependencies {
     // Para ViewModels (parte do padrão Observer/MVVM)
     implementation(libs.lifecycle.viewmodel)
     implementation(libs.lifecycle.livedata)
+
+    implementation(libs.converter.scalars)
 }
