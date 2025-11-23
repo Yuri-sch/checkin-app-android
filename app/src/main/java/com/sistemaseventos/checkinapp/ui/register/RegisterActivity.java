@@ -8,9 +8,10 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 import com.sistemaseventos.checkinapp.R;
+import com.sistemaseventos.checkinapp.ui.BaseActivity;
 import com.sistemaseventos.checkinapp.ui.userdetail.UserDetailActivity;
 
-public class RegisterActivity extends AppCompatActivity {
+public class RegisterActivity extends BaseActivity {
 
     private RegisterViewModel viewModel;
 

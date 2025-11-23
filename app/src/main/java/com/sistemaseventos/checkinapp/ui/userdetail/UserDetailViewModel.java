@@ -5,7 +5,7 @@ import androidx.annotation.NonNull;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
-import com.sistemaseventos.checkinapp.data.db.entity.EnrollmentEntity;
+import com.sistemaseventos.checkinapp.data.db.entity.EnrollmentWithEvent; // Novo import
 import com.sistemaseventos.checkinapp.data.repository.EnrollmentRepository;
 import java.util.List;
 
@@ -13,12 +13,12 @@ public class UserDetailViewModel extends AndroidViewModel {
 
     private EnrollmentRepository enrollmentRepository;
 
-    private MutableLiveData<List<EnrollmentEntity>> _enrollments = new MutableLiveData<>();
-    public LiveData<List<EnrollmentEntity>> enrollments = _enrollments;
+    // Agora lista EnrollmentWithEvent
+    private MutableLiveData<List<EnrollmentWithEvent>> _enrollments = new MutableLiveData<>();
+    public LiveData<List<EnrollmentWithEvent>> enrollments = _enrollments;
 
-    // A VARIÁVEL QUE FALTAVA:
-    private MutableLiveData<Boolean> _checkInSuccess = new MutableLiveData<>();
-    public LiveData<Boolean> checkInSuccess = _checkInSuccess;
+    private MutableLiveData<Boolean> _actionSuccess = new MutableLiveData<>();
+    public LiveData<Boolean> actionSuccess = _actionSuccess;
 
     public UserDetailViewModel(@NonNull Application application) {
         super(application);
@@ -27,7 +27,8 @@ public class UserDetailViewModel extends AndroidViewModel {
 
     public void loadEnrollments(String userId) {
         new Thread(() -> {
-            List<EnrollmentEntity> list = enrollmentRepository.getEnrollmentsForUser(userId);
+            // Busca com JOIN
+            List<EnrollmentWithEvent> list = enrollmentRepository.getEnrollmentsWithEventsForUser(userId);
             _enrollments.postValue(list);
         }).start();
     }
@@ -35,7 +36,14 @@ public class UserDetailViewModel extends AndroidViewModel {
     public void performCheckIn(String enrollmentId) {
         new Thread(() -> {
             boolean success = enrollmentRepository.performCheckIn(enrollmentId);
-            _checkInSuccess.postValue(success);
+            _actionSuccess.postValue(success);
+        }).start();
+    }
+
+    public void cancelEnrollment(String enrollmentId) {
+        new Thread(() -> {
+            boolean success = enrollmentRepository.cancelEnrollment(enrollmentId);
+            _actionSuccess.postValue(success);
         }).start();
     }
 }

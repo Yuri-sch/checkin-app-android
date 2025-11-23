@@ -12,7 +12,7 @@ public class RegisterViewModel extends AndroidViewModel {
 
     private UserRepository userRepository;
 
-    // A VARIÁVEL QUE FALTAVA:
+    // CORREÇÃO: A variável que faltava
     private MutableLiveData<UserEntity> _registerSuccess = new MutableLiveData<>();
     public LiveData<UserEntity> registerSuccess = _registerSuccess;
 

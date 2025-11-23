@@ -17,4 +17,9 @@ public interface EventDao {
 
     @Query("SELECT * FROM events WHERE eventName LIKE :query")
     List<EventEntity> searchEventsByName(String query);
+
+    // NOVO: Limpa apenas eventos que vieram da API (sincronizados)
+    // Assim não apagamos os eventos criados offline que ainda vão subir
+    @Query("DELETE FROM events WHERE isSynced = 1")
+    void deleteSyncedEvents();
 }

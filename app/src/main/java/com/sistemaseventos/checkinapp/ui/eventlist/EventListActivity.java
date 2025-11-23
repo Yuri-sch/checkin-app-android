@@ -10,8 +10,9 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.sistemaseventos.checkinapp.R;
 import com.sistemaseventos.checkinapp.data.db.entity.EventEntity;
+import com.sistemaseventos.checkinapp.ui.BaseActivity;
 
-public class EventListActivity extends AppCompatActivity {
+public class EventListActivity extends BaseActivity {
 
     private EventListViewModel viewModel;
     private EventListAdapter adapter;

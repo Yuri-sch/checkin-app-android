@@ -25,18 +25,14 @@ public class EventRepository {
 
     public List<EventEntity> getAllEvents() {
         try {
-            // 1. Tenta buscar na API
             Response<List<EventResponse>> response = apiService.getAllEvents().execute();
 
             if (response.isSuccessful() && response.body() != null) {
-                List<EventEntity> events = new ArrayList<>();
+                List<EventEntity> apiEvents = new ArrayList<>();
                 for (EventResponse res : response.body()) {
+                    if (res.id == null) continue;
+
                     EventEntity e = new EventEntity();
-                    // IMPORTANTE: Validação de ID para evitar sobrescrita errada
-                    if (res.id == null) {
-                        Log.e(TAG, "Evento vindo da API sem ID! Ignorando.");
-                        continue;
-                    }
                     e.id = res.id;
                     e.eventName = res.eventName;
                     e.eventDate = res.eventDate;
@@ -45,20 +41,19 @@ public class EventRepository {
                     e.category = res.category;
                     e.eventLocal = res.eventLocal;
                     e.isSynced = true;
-                    events.add(e);
+                    apiEvents.add(e);
                 }
 
-                // Atualiza o cache apenas se houver dados válidos
-                if (!events.isEmpty()) {
-                    eventDao.upsertAll(events);
+                // Apenas insere/atualiza. NÃO APAGA NADA.
+                if (!apiEvents.isEmpty()) {
+                    eventDao.upsertAll(apiEvents);
                 }
-                return events;
             }
         } catch (Exception e) {
-            Log.e(TAG, "Erro API Eventos (Offline). Usando cache.", e);
+            Log.e(TAG, "Erro ao baixar eventos (usando cache): " + e.getMessage());
+            // Isso garante que se o Gson falhar na data, o app não crasha, só usa o cache
         }
 
-        // 2. Fallback: Retorna do banco local
         return eventDao.getAllEvents();
     }
 

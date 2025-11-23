@@ -2,20 +2,23 @@ package com.sistemaseventos.checkinapp.ui.userdetail;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.sistemaseventos.checkinapp.R;
-import com.sistemaseventos.checkinapp.data.db.entity.EnrollmentEntity;
-import com.sistemaseventos.checkinapp.ui.checkin.CheckinActivity;
+import com.sistemaseventos.checkinapp.data.db.entity.EnrollmentWithEvent;
+import com.sistemaseventos.checkinapp.ui.BaseActivity;
 import com.sistemaseventos.checkinapp.ui.eventlist.EventListActivity;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
-public class UserDetailActivity extends AppCompatActivity {
+public class UserDetailActivity extends BaseActivity implements EnrollmentAdapter.OnInteractionListener {
 
     private UserDetailViewModel viewModel;
     private EnrollmentAdapter adapter;
@@ -31,20 +34,33 @@ public class UserDetailActivity extends AppCompatActivity {
         String userCpf = getIntent().getStringExtra("USER_CPF");
         String userEmail = getIntent().getStringExtra("USER_EMAIL");
 
+        // Recebe a data de nascimento da Intent (passada como Long ou String)
+        // Supondo que CheckinActivity passe como long (timestamp)
+        long birthDateMillis = getIntent().getLongExtra("USER_BIRTHDATE", 0);
+
         viewModel = new ViewModelProvider(this).get(UserDetailViewModel.class);
 
         TextView textName = findViewById(R.id.text_user_name);
         TextView textCpf = findViewById(R.id.text_user_cpf);
         TextView textEmail = findViewById(R.id.text_user_email);
+        TextView textBirth = findViewById(R.id.text_user_birth); // Novo campo
 
         textName.setText(userName != null ? userName : "Nome não disponível");
         textCpf.setText(userCpf != null ? "CPF: " + userCpf : "");
         textEmail.setText(userEmail != null ? userEmail : "");
 
+        if (birthDateMillis > 0) {
+            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault());
+            textBirth.setText("Nascimento: " + sdf.format(new Date(birthDateMillis)));
+            textBirth.setVisibility(View.VISIBLE);
+        } else {
+            textBirth.setVisibility(View.GONE);
+        }
+
         RecyclerView recyclerView = findViewById(R.id.recycler_enrollments);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        adapter = new EnrollmentAdapter(this::showCheckInConfirmation);
+        adapter = new EnrollmentAdapter(this);
         recyclerView.setAdapter(adapter);
 
         Button btnNewEnrollment = findViewById(R.id.btn_new_enrollment);
@@ -56,13 +72,13 @@ public class UserDetailActivity extends AppCompatActivity {
 
         viewModel.enrollments.observe(this, list -> adapter.setList(list));
 
-        // Agora a variável checkInSuccess EXISTE no ViewModel
-        viewModel.checkInSuccess.observe(this, success -> {
+        viewModel.actionSuccess.observe(this, success -> {
             if (success) {
-                Toast.makeText(this, "Check-in realizado com sucesso!", Toast.LENGTH_LONG).show();
                 if (userId != null) viewModel.loadEnrollments(userId);
             } else {
-                Toast.makeText(this, "Erro ao realizar check-in.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Ação pendente (offline) ou erro.", Toast.LENGTH_SHORT).show();
+                // Recarrega mesmo assim para mostrar estado offline se tiver mudado
+                if (userId != null) viewModel.loadEnrollments(userId);
             }
         });
     }
@@ -75,17 +91,34 @@ public class UserDetailActivity extends AppCompatActivity {
         }
     }
 
-    private void showCheckInConfirmation(EnrollmentEntity item) {
-        if (item.checkIn != null) {
-            Toast.makeText(this, "Check-in já foi realizado.", Toast.LENGTH_SHORT).show();
+    @Override
+    public void onCheckInClick(EnrollmentWithEvent item) {
+        if (item.enrollment.checkIn != null) {
+            Toast.makeText(this, "Check-in já realizado.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if ("CANCELED".equals(item.enrollment.status)) {
+            Toast.makeText(this, "Inscrição cancelada.", Toast.LENGTH_SHORT).show();
             return;
         }
 
         new AlertDialog.Builder(this)
                 .setTitle("Confirmar Presença")
-                .setMessage("Realizar check-in para este evento?")
-                .setPositiveButton("Confirmar", (dialog, which) -> viewModel.performCheckIn(item.id))
-                .setNegativeButton("Cancelar", null)
+                .setMessage("Evento: " + (item.event != null ? item.event.eventName : "Desconhecido"))
+                .setPositiveButton("Confirmar", (dialog, which) -> viewModel.performCheckIn(item.enrollment.id))
+                .setNegativeButton("Voltar", null)
+                .show();
+    }
+
+    @Override
+    public void onCancelClick(EnrollmentWithEvent item) {
+        if ("CANCELED".equals(item.enrollment.status)) return;
+
+        new AlertDialog.Builder(this)
+                .setTitle("Cancelar Inscrição")
+                .setMessage("Deseja cancelar a inscrição em " + (item.event != null ? item.event.eventName : "este evento") + "?")
+                .setPositiveButton("Sim, Cancelar", (dialog, which) -> viewModel.cancelEnrollment(item.enrollment.id))
+                .setNegativeButton("Não", null)
                 .show();
     }
 }
