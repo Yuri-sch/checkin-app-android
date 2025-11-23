@@ -25,12 +25,18 @@ public class EventRepository {
 
     public List<EventEntity> getAllEvents() {
         try {
+            // 1. Tenta buscar na API
             Response<List<EventResponse>> response = apiService.getAllEvents().execute();
 
             if (response.isSuccessful() && response.body() != null) {
                 List<EventEntity> events = new ArrayList<>();
                 for (EventResponse res : response.body()) {
                     EventEntity e = new EventEntity();
+                    // IMPORTANTE: Validação de ID para evitar sobrescrita errada
+                    if (res.id == null) {
+                        Log.e(TAG, "Evento vindo da API sem ID! Ignorando.");
+                        continue;
+                    }
                     e.id = res.id;
                     e.eventName = res.eventName;
                     e.eventDate = res.eventDate;
@@ -41,12 +47,18 @@ public class EventRepository {
                     e.isSynced = true;
                     events.add(e);
                 }
-                eventDao.upsertAll(events);
+
+                // Atualiza o cache apenas se houver dados válidos
+                if (!events.isEmpty()) {
+                    eventDao.upsertAll(events);
+                }
                 return events;
             }
         } catch (Exception e) {
-            Log.e(TAG, "Erro ao buscar eventos na API (Offline). Usando cache.", e);
+            Log.e(TAG, "Erro API Eventos (Offline). Usando cache.", e);
         }
+
+        // 2. Fallback: Retorna do banco local
         return eventDao.getAllEvents();
     }
 

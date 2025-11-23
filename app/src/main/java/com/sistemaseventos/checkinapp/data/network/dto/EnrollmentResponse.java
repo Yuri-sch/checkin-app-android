@@ -6,13 +6,14 @@ import java.util.Date;
 public class EnrollmentResponse {
     public String id;
 
-    @SerializedName("events_id")
+    // Ajustado para aceitar o padrão do novo DTO
+    @SerializedName(value = "eventId", alternate = {"events_id", "event_id"})
     public String eventsId;
 
-    @SerializedName("users_id")
+    @SerializedName(value = "userId", alternate = {"users_id", "user_id"})
     public String usersId;
 
-    @SerializedName("check_in")
+    @SerializedName(value = "checkIn", alternate = {"check_in"})
     public Date checkIn;
 
     public String status;

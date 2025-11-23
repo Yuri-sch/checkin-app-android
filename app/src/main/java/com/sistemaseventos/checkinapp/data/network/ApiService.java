@@ -7,30 +7,35 @@ import retrofit2.http.*;
 
 public interface ApiService {
 
-    // Login: Retorna String pura (Token)
+    // --- AUTENTICAÇÃO ---
     @POST("auth/login")
     Call<String> login(@Body LoginRequest request);
 
-    // Busca por CPF: Retorna UserResponse
-    // AVISO: O backend DEVE ter este endpoint implementado.
+    // --- USUÁRIOS ---
     @GET("users/search")
     Call<UserResponse> findUserByCpf(@Query("cpf") String cpf);
 
-    // Cadastro Rápido (Sync): Usa a rota de sync do UserController
     @POST("users/sync")
     Call<UserResponse> syncOfflineUser(@Body UserSyncDTO dto);
+
+    @POST("auth/register") // Rota de cadastro público usada pelo app
+    Call<UserResponse> registerSimpleUser(@Body SimpleUserRequest request);
 
     // --- EVENTOS ---
     @GET("events")
     Call<List<EventResponse>> getAllEvents();
 
-    // --- INSCRIÇÕES ---
-    @GET("enrollments")
-    Call<List<EnrollmentResponse>> getEnrollments(@Query("userId") String userId);
+    // --- INSCRIÇÕES (ROTAS ATUALIZADAS) ---
 
-    @POST("enrollments")
+    // Listar por usuário: GET /registrations/users/{id}
+    @GET("registrations/users/{id}")
+    Call<List<EnrollmentResponse>> getEnrollments(@Path("id") String userId);
+
+    // Criar inscrição: POST /registrations
+    @POST("registrations")
     Call<EnrollmentResponse> createEnrollment(@Body CreateEnrollmentRequest request);
 
-    @POST("enrollments/{id}/checkin")
-    Call<Void> performCheckIn(@Path("id") String enrollmentId);
+    // Fazer Check-in: PATCH /registrations/{id}/check-in
+    @PATCH("registrations/{id}/check-in")
+    Call<EnrollmentResponse> performCheckIn(@Path("id") String enrollmentId);
 }

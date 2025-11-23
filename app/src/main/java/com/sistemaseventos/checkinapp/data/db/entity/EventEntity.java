@@ -9,7 +9,7 @@ import java.util.Date;
 public class EventEntity {
     @PrimaryKey
     @NonNull
-    public String id; // Este ID deve ser único e vir do backend!
+    public String id; // ID único do evento (UUID)
 
     public String eventName;
     public Date eventDate;
@@ -18,5 +18,5 @@ public class EventEntity {
     public String category;
     public String eventLocal;
 
-    public boolean isSynced = true;
+    public boolean isSynced = true; // Controle de sincronização
 }
