@@ -4,8 +4,8 @@ public class UserSyncDTO {
     public String cpf;
     public String email;
     public String fullname;
-    // Adicione outros campos se o seu backend exigir na sincronização
 
+    // Construtor necessário
     public UserSyncDTO(String cpf, String email, String fullname) {
         this.cpf = cpf;
         this.email = email;

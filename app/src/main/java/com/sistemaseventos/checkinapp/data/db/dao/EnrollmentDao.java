@@ -24,4 +24,11 @@ public interface EnrollmentDao {
     // O MÉTODO QUE FALTAVA: Busca tudo que não foi sincronizado (isSynced = 0 ou false)
     @Query("SELECT * FROM enrollments WHERE isSynced = 0")
     List<EnrollmentEntity> getUnsyncedEnrollments();
+
+    // Adicione isto na Interface EnrollmentDao
+    @androidx.room.Query("UPDATE enrollments SET checkIn = :date, isSynced = :synced WHERE id = :id")
+    void updateCheckInStatus(String id, java.util.Date date, boolean synced);
+
+    @androidx.room.Delete
+    void delete(EnrollmentEntity enrollment);
 }

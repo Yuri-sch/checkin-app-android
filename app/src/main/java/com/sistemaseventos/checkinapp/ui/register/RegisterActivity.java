@@ -35,15 +35,17 @@ public class RegisterActivity extends AppCompatActivity {
             String email = emailInput.getText().toString();
             String cpf = cpfInput.getText().toString();
             if (!email.isEmpty() && !cpf.isEmpty()) {
-                viewModel.register(cpf, email);
+                viewModel.registerSimpleUser(cpf, email);
             }
         });
 
-        viewModel.success.observe(this, user -> {
+        viewModel.registerSuccess.observe(this, user -> {
             Toast.makeText(this, "Cadastro realizado!", Toast.LENGTH_SHORT).show();
-            Intent intent = new Intent(this, UserDetailActivity.class);
+            Intent intent = new Intent(RegisterActivity.this, UserDetailActivity.class);
             intent.putExtra("USER_ID", user.id);
             intent.putExtra("USER_NAME", user.fullname);
+            intent.putExtra("USER_CPF", user.cpf);     // Adicione isso
+            intent.putExtra("USER_EMAIL", user.email); // Adicione isso
             startActivity(intent);
             finish();
         });

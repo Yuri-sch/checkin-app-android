@@ -33,9 +33,11 @@ public class CheckinActivity extends AppCompatActivity {
 
         // Se achou o usuário, vai para detalhes (Etapa 4)
         viewModel.userFound.observe(this, user -> {
-            Intent intent = new Intent(this, UserDetailActivity.class);
+            Intent intent = new Intent(CheckinActivity.this, UserDetailActivity.class);
             intent.putExtra("USER_ID", user.id);
             intent.putExtra("USER_NAME", user.fullname);
+            intent.putExtra("USER_CPF", user.cpf);     // Adicione isso
+            intent.putExtra("USER_EMAIL", user.email); // Adicione isso
             startActivity(intent);
         });
 

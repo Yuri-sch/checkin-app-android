@@ -28,16 +28,23 @@ public class UserDetailActivity extends AppCompatActivity {
 
         userId = getIntent().getStringExtra("USER_ID");
         String userName = getIntent().getStringExtra("USER_NAME");
+        String userCpf = getIntent().getStringExtra("USER_CPF");
+        String userEmail = getIntent().getStringExtra("USER_EMAIL");
 
         viewModel = new ViewModelProvider(this).get(UserDetailViewModel.class);
 
-        TextView welcomeText = findViewById(R.id.welcome_text);
-        welcomeText.setText("Participante: " + userName);
+        TextView textName = findViewById(R.id.text_user_name);
+        TextView textCpf = findViewById(R.id.text_user_cpf);
+        TextView textEmail = findViewById(R.id.text_user_email);
+
+        textName.setText(userName != null ? userName : "Nome não disponível");
+        textCpf.setText(userCpf != null ? "CPF: " + userCpf : "");
+        textEmail.setText(userEmail != null ? userEmail : "");
 
         RecyclerView recyclerView = findViewById(R.id.recycler_enrollments);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        adapter = new EnrollmentAdapter(this::confirmCheckIn);
+        adapter = new EnrollmentAdapter(this::showCheckInConfirmation);
         recyclerView.setAdapter(adapter);
 
         Button btnNewEnrollment = findViewById(R.id.btn_new_enrollment);
@@ -49,13 +56,13 @@ public class UserDetailActivity extends AppCompatActivity {
 
         viewModel.enrollments.observe(this, list -> adapter.setList(list));
 
-        viewModel.checkinSuccess.observe(this, success -> {
+        // Agora a variável checkInSuccess EXISTE no ViewModel
+        viewModel.checkInSuccess.observe(this, success -> {
             if (success) {
-                Toast.makeText(this, "Check-in confirmado!", Toast.LENGTH_LONG).show();
-                // Volta para o início (Etapa 2)
-                Intent intent = new Intent(this, CheckinActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                startActivity(intent);
+                Toast.makeText(this, "Check-in realizado com sucesso!", Toast.LENGTH_LONG).show();
+                if (userId != null) viewModel.loadEnrollments(userId);
+            } else {
+                Toast.makeText(this, "Erro ao realizar check-in.", Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -63,15 +70,22 @@ public class UserDetailActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (userId != null) viewModel.loadEnrollments(userId);
+        if (userId != null) {
+            viewModel.loadEnrollments(userId);
+        }
     }
 
-    private void confirmCheckIn(EnrollmentEntity item) {
+    private void showCheckInConfirmation(EnrollmentEntity item) {
+        if (item.checkIn != null) {
+            Toast.makeText(this, "Check-in já foi realizado.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         new AlertDialog.Builder(this)
-                .setTitle("Confirmar Check-in")
-                .setMessage("Confirmar presença neste evento?")
-                .setPositiveButton("Sim", (d, w) -> viewModel.performCheckIn(item.id))
-                .setNegativeButton("Não", null)
+                .setTitle("Confirmar Presença")
+                .setMessage("Realizar check-in para este evento?")
+                .setPositiveButton("Confirmar", (dialog, which) -> viewModel.performCheckIn(item.id))
+                .setNegativeButton("Cancelar", null)
                 .show();
     }
 }

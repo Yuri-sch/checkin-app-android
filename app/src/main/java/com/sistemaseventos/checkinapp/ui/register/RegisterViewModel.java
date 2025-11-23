@@ -1,6 +1,7 @@
 package com.sistemaseventos.checkinapp.ui.register;
 
 import android.app.Application;
+import androidx.annotation.NonNull;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
@@ -9,20 +10,33 @@ import com.sistemaseventos.checkinapp.data.repository.UserRepository;
 
 public class RegisterViewModel extends AndroidViewModel {
 
-    private UserRepository repository;
-    private MutableLiveData<UserEntity> _success = new MutableLiveData<>();
-    public LiveData<UserEntity> success = _success;
+    private UserRepository userRepository;
 
-    public RegisterViewModel(Application application) {
+    // A VARIÁVEL QUE FALTAVA:
+    private MutableLiveData<UserEntity> _registerSuccess = new MutableLiveData<>();
+    public LiveData<UserEntity> registerSuccess = _registerSuccess;
+
+    private MutableLiveData<String> _error = new MutableLiveData<>();
+    public LiveData<String> error = _error;
+
+    public RegisterViewModel(@NonNull Application application) {
         super(application);
-        repository = new UserRepository(application);
+        userRepository = new UserRepository(application);
     }
 
-    public void register(String cpf, String email) {
+    public void registerSimpleUser(String cpf, String email) {
+        if (cpf.isEmpty() || email.isEmpty()) {
+            _error.postValue("Preencha CPF e E-mail.");
+            return;
+        }
+
         new Thread(() -> {
-            UserEntity user = repository.registerSimpleUser(cpf, email);
-            if (user != null) {
-                _success.postValue(user);
+            UserEntity newUser = userRepository.registerSimpleUser(cpf, email);
+
+            if (newUser != null) {
+                _registerSuccess.postValue(newUser);
+            } else {
+                _error.postValue("Erro ao realizar cadastro.");
             }
         }).start();
     }

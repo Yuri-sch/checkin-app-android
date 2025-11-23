@@ -7,19 +7,18 @@ import retrofit2.http.*;
 
 public interface ApiService {
 
-    // --- AUTENTICAÇÃO ---
+    // Login: Retorna String pura (Token)
     @POST("auth/login")
     Call<String> login(@Body LoginRequest request);
 
-    // --- USUÁRIOS ---
-    @POST("users/sync")
-    Call<UserResponse> syncOfflineUser(@Body UserSyncDTO dto);
-
+    // Busca por CPF: Retorna UserResponse
+    // AVISO: O backend DEVE ter este endpoint implementado.
     @GET("users/search")
     Call<UserResponse> findUserByCpf(@Query("cpf") String cpf);
 
-    @POST("users/register-simple")
-    Call<UserResponse> registerSimpleUser(@Body SimpleUserRequest request);
+    // Cadastro Rápido (Sync): Usa a rota de sync do UserController
+    @POST("users/sync")
+    Call<UserResponse> syncOfflineUser(@Body UserSyncDTO dto);
 
     // --- EVENTOS ---
     @GET("events")

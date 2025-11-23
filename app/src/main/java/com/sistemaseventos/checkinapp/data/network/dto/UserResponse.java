@@ -9,8 +9,7 @@ public class UserResponse {
     public String fullname;
     public String email;
 
-    // Este é o campo que estava faltando ou com nome diferente
-    @SerializedName("birth_date")
+    @SerializedName("birth_date") // Mapeia o JSON "birth_date" para o Java "birthDate"
     public Date birthDate;
 
     public boolean complete;

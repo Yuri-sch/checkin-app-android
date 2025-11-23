@@ -1,6 +1,7 @@
 package com.sistemaseventos.checkinapp.ui.userdetail;
 
 import android.app.Application;
+import androidx.annotation.NonNull;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
@@ -10,28 +11,31 @@ import java.util.List;
 
 public class UserDetailViewModel extends AndroidViewModel {
 
-    private EnrollmentRepository repository;
+    private EnrollmentRepository enrollmentRepository;
+
     private MutableLiveData<List<EnrollmentEntity>> _enrollments = new MutableLiveData<>();
     public LiveData<List<EnrollmentEntity>> enrollments = _enrollments;
-    private MutableLiveData<Boolean> _checkinSuccess = new MutableLiveData<>();
-    public LiveData<Boolean> checkinSuccess = _checkinSuccess;
 
-    public UserDetailViewModel(Application application) {
+    // A VARIÁVEL QUE FALTAVA:
+    private MutableLiveData<Boolean> _checkInSuccess = new MutableLiveData<>();
+    public LiveData<Boolean> checkInSuccess = _checkInSuccess;
+
+    public UserDetailViewModel(@NonNull Application application) {
         super(application);
-        repository = new EnrollmentRepository(application);
+        enrollmentRepository = new EnrollmentRepository(application);
     }
 
     public void loadEnrollments(String userId) {
         new Thread(() -> {
-            List<EnrollmentEntity> list = repository.getEnrollmentsForUser(userId);
+            List<EnrollmentEntity> list = enrollmentRepository.getEnrollmentsForUser(userId);
             _enrollments.postValue(list);
         }).start();
     }
 
     public void performCheckIn(String enrollmentId) {
         new Thread(() -> {
-            boolean success = repository.performCheckIn(enrollmentId);
-            _checkinSuccess.postValue(success);
+            boolean success = enrollmentRepository.performCheckIn(enrollmentId);
+            _checkInSuccess.postValue(success);
         }).start();
     }
 }
