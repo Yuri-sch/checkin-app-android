@@ -13,14 +13,16 @@ public interface ApiService {
     @GET("users/search")
     Call<UserResponse> findUserByCpf(@Query("cpf") String cpf);
 
-    @POST("users/sync")
-    Call<UserResponse> syncOfflineUser(@Body UserSyncDTO dto);
-
     @POST("auth/register")
     Call<UserResponse> registerSimpleUser(@Body SimpleUserRequest request);
 
+    @POST("users/sync")
+    Call<UserResponse> syncUser(@Body UserSyncDTO request);
+
     @GET("events")
     Call<List<EventResponse>> getAllEvents();
+
+    // --- MUDANÇA PARA V3: /registrations ---
 
     @GET("registrations/users/{id}")
     Call<List<EnrollmentResponse>> getEnrollments(@Path("id") String userId);
@@ -31,7 +33,6 @@ public interface ApiService {
     @PATCH("registrations/{id}/check-in")
     Call<EnrollmentResponse> performCheckIn(@Path("id") String enrollmentId);
 
-    // --- NOVA ROTA DE CANCELAMENTO ---
     @PATCH("registrations/{id}/cancel")
     Call<EnrollmentResponse> cancelRegistration(@Path("id") String enrollmentId);
 }

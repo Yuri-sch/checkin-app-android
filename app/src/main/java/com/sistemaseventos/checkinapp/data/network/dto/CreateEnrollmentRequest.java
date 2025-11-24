@@ -3,7 +3,7 @@ package com.sistemaseventos.checkinapp.data.network.dto;
 import com.google.gson.annotations.SerializedName;
 
 public class CreateEnrollmentRequest {
-    // O novo backend provavelmente espera camelCase
+    // Backend V3 espera "userId" e "eventId" (camelCase)
     @SerializedName("userId")
     public String userId;
 

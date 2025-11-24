@@ -5,37 +5,25 @@ import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ProgressBar;
-import android.widget.TextView;
-import android.widget.Toast;
 import androidx.annotation.LayoutRes;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.work.OneTimeWorkRequest;
-import androidx.work.WorkInfo;
-import androidx.work.WorkManager;
 import com.sistemaseventos.checkinapp.R;
-import com.sistemaseventos.checkinapp.sync.SyncWorker;
+import com.sistemaseventos.checkinapp.sync.SyncManager;
 
-// Classe abstrata para servir de base para as outras
 public abstract class BaseActivity extends AppCompatActivity {
 
     private ProgressBar loading;
     private ImageButton btnSync;
+    private SyncManager syncManager;
 
     @Override
     public void setContentView(@LayoutRes int layoutResID) {
-        // 1. Pega o layout base (que tem o banner)
         View baseView = getLayoutInflater().inflate(R.layout.activity_base, null);
-
-        // 2. Pega o container onde vai o conteúdo da tela específica
         FrameLayout container = baseView.findViewById(R.id.base_content_frame);
-
-        // 3. Infla o layout da Activity filha (ex: activity_checkin) DENTRO do container
         getLayoutInflater().inflate(layoutResID, container, true);
-
-        // 4. Define esse layout combinado como a tela
         super.setContentView(baseView);
 
-        // 5. Configura o botão do banner
+        syncManager = new SyncManager(this);
         setupToolbar(baseView);
     }
 
@@ -44,35 +32,30 @@ public abstract class BaseActivity extends AppCompatActivity {
         loading = root.findViewById(R.id.progress_sync_loading);
 
         if (btnSync != null) {
-            btnSync.setOnClickListener(v -> requestSync());
-        }
-
-        // Monitora se o Worker está rodando para mostrar o loading
-        try {
-            WorkManager.getInstance(this).getWorkInfosByTagLiveData("sync_work")
-                    .observe(this, workInfos -> {
-                        if (workInfos != null && !workInfos.isEmpty()) {
-                            WorkInfo.State state = workInfos.get(0).getState();
-                            boolean isRunning = state == WorkInfo.State.RUNNING || state == WorkInfo.State.ENQUEUED;
-
-                            if (loading != null) loading.setVisibility(isRunning ? View.VISIBLE : View.GONE);
-                            if (btnSync != null) btnSync.setEnabled(!isRunning);
-                        }
-                    });
-        } catch (Exception e) {
-            // Evita crash se WorkManager não estiver inicializado
+            btnSync.setOnClickListener(v -> requestManualSync());
         }
     }
 
-    // O método que o seu CheckinActivity estava procurando!
-    protected void requestSync() {
-        Toast.makeText(this, "Sincronizando dados...", Toast.LENGTH_SHORT).show();
+    protected void requestManualSync() {
+        if (loading != null) loading.setVisibility(View.VISIBLE);
+        if (btnSync != null) btnSync.setEnabled(false);
 
-        // Inicia o Worker imediatamente
-        OneTimeWorkRequest syncRequest = new OneTimeWorkRequest.Builder(SyncWorker.class)
-                .addTag("sync_work")
-                .build();
+        syncManager.syncAll(new SyncManager.OnSyncListener() {
+            @Override
+            public void onSyncComplete() {
+                if (loading != null) loading.setVisibility(View.GONE);
+                if (btnSync != null) btnSync.setEnabled(true);
+                onSyncFinished(); // Hook para subclasses atualizarem a tela
+            }
 
-        WorkManager.getInstance(this).enqueue(syncRequest);
+            @Override
+            public void onSyncError(String error) {
+                if (loading != null) loading.setVisibility(View.GONE);
+                if (btnSync != null) btnSync.setEnabled(true);
+            }
+        });
     }
+
+    // Método vazio que as activities filhas podem sobrescrever para atualizar a lista após o sync
+    protected void onSyncFinished() {}
 }

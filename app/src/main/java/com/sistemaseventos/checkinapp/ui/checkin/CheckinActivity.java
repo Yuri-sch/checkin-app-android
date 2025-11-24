@@ -21,8 +21,6 @@ public class CheckinActivity extends BaseActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_checkin);
 
-        requestSync();
-
         viewModel = new ViewModelProvider(this).get(CheckinViewModel.class);
 
         cpfInput = findViewById(R.id.cpf_input);

@@ -6,16 +6,17 @@ import java.util.Date;
 public class EventResponse {
     public String id;
 
-    @SerializedName("event_name")
+    // AQUI ESTÁ O TRUQUE: 'alternate' permite ler "eventName" (do Java/Spring) OU "event_name" (do Banco/Python/Legacy)
+    @SerializedName(value = "eventName", alternate = {"event_name", "name"})
     public String eventName;
 
-    @SerializedName("event_date")
+    @SerializedName(value = "eventDate", alternate = {"event_date", "date", "data"})
     public Date eventDate;
 
     public String description;
     public String duration;
     public String category;
 
-    @SerializedName("event_local")
+    @SerializedName(value = "eventLocal", alternate = {"event_local", "local", "location"})
     public String eventLocal;
 }
