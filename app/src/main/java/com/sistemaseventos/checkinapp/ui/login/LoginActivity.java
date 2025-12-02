@@ -8,6 +8,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 import com.sistemaseventos.checkinapp.R;
+import com.sistemaseventos.checkinapp.sync.SyncManager;
 import com.sistemaseventos.checkinapp.ui.checkin.CheckinActivity;
 
 public class LoginActivity extends AppCompatActivity {

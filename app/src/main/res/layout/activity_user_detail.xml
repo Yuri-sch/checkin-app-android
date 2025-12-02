@@ -100,7 +100,7 @@
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
         android:text="Inscrever em Novo Evento"
-        android:backgroundTint="#6200EE"
+        android:backgroundTint="#388E3C"
         android:textColor="@android:color/white"
         android:textSize="16sp"
         android:padding="12dp"

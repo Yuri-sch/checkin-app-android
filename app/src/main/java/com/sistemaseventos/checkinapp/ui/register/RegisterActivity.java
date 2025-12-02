@@ -10,6 +10,7 @@ import androidx.lifecycle.ViewModelProvider;
 import com.sistemaseventos.checkinapp.R;
 import com.sistemaseventos.checkinapp.ui.BaseActivity;
 import com.sistemaseventos.checkinapp.ui.userdetail.UserDetailActivity;
+import com.sistemaseventos.checkinapp.util.CpfValidator;
 
 public class RegisterActivity extends BaseActivity {
 
@@ -34,19 +35,36 @@ public class RegisterActivity extends BaseActivity {
 
         registerButton.setOnClickListener(v -> {
             String email = emailInput.getText().toString();
-            String cpf = cpfInput.getText().toString();
-            if (!email.isEmpty() && !cpf.isEmpty()) {
-                viewModel.registerSimpleUser(cpf, email);
+            // Limpa o CPF para garantir
+            String cpf = cpfInput.getText().toString().replaceAll("[^0-9]", "");
+
+            if (email.isEmpty() || cpf.isEmpty()) {
+                Toast.makeText(this, "Preencha todos os campos", Toast.LENGTH_SHORT).show();
+                return;
             }
+
+            // Validação extra de segurança
+            if (!CpfValidator.isValid(cpf)) {
+                Toast.makeText(this, "CPF Inválido", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            viewModel.registerSimpleUser(cpf, email);
         });
 
         viewModel.registerSuccess.observe(this, user -> {
-            Toast.makeText(this, "Cadastro realizado!", Toast.LENGTH_SHORT).show();
+            // VERIFICAÇÃO ADICIONADA
+            if (!user.isSynced) {
+                Toast.makeText(this, "Sem internet: Usuário salvo localmente e pendente de envio.", Toast.LENGTH_LONG).show();
+            } else {
+                Toast.makeText(this, "Cadastro realizado e sincronizado!", Toast.LENGTH_SHORT).show();
+            }
+
             Intent intent = new Intent(RegisterActivity.this, UserDetailActivity.class);
             intent.putExtra("USER_ID", user.id);
             intent.putExtra("USER_NAME", user.fullname);
-            intent.putExtra("USER_CPF", user.cpf);     // Adicione isso
-            intent.putExtra("USER_EMAIL", user.email); // Adicione isso
+            intent.putExtra("USER_CPF", user.cpf);
+            intent.putExtra("USER_EMAIL", user.email);
             startActivity(intent);
             finish();
         });

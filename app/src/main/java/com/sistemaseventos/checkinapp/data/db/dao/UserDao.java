@@ -1,6 +1,7 @@
 package com.sistemaseventos.checkinapp.data.db.dao;
 
 import androidx.room.Dao;
+import androidx.room.Delete;
 import androidx.room.Insert;
 import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
@@ -15,7 +16,13 @@ public interface UserDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     void upsert(UserEntity user);
 
-    // Este é o método que estava faltando na sua imagem
     @Query("SELECT * FROM users WHERE isSynced = 0")
     List<UserEntity> getUnsyncedUsers();
+
+    @Delete
+    void delete(UserEntity user);
+
+    // ADICIONE ESTE MÉTODO:
+    @Query("DELETE FROM users WHERE id = :id")
+    void deleteById(String id);
 }

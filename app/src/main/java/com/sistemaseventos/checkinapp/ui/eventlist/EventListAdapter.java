@@ -17,7 +17,6 @@ public class EventListAdapter extends RecyclerView.Adapter<EventListAdapter.View
 
     private List<EventEntity> list = new ArrayList<>();
     private OnItemClickListener listener;
-    // Formatador de data para ficar bonito (ex: 20/11/2025)
     private SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
 
     public interface OnItemClickListener {
@@ -36,9 +35,10 @@ public class EventListAdapter extends RecyclerView.Adapter<EventListAdapter.View
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        // AGORA USA O NOSSO LAYOUT BONITO
+        // --- CORREÇÃO AQUI ---
+        // Mudamos de R.layout.item_event para R.layout.item_event_selection
         View v = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.item_event, parent, false);
+                .inflate(R.layout.item_event_selection, parent, false);
         return new ViewHolder(v);
     }
 
@@ -46,17 +46,16 @@ public class EventListAdapter extends RecyclerView.Adapter<EventListAdapter.View
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         EventEntity item = list.get(position);
 
+        // Agora não dará mais erro, pois o layout item_event_selection tem esses IDs
         holder.name.setText(item.eventName);
         holder.category.setText(item.category != null ? item.category : "Geral");
 
-        // Trata o "null" do local
         if (item.eventLocal != null && !item.eventLocal.equals("null")) {
             holder.local.setText(item.eventLocal);
         } else {
             holder.local.setText("Local a definir");
         }
 
-        // Formata a data se existir
         if (item.eventDate != null) {
             holder.date.setText(dateFormat.format(item.eventDate));
         } else {
@@ -73,6 +72,7 @@ public class EventListAdapter extends RecyclerView.Adapter<EventListAdapter.View
         TextView name, category, local, date;
         ViewHolder(View v) {
             super(v);
+            // Esses IDs devem existir em item_event_selection.xml
             name = v.findViewById(R.id.text_event_name);
             category = v.findViewById(R.id.text_event_category);
             local = v.findViewById(R.id.text_event_local);

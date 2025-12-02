@@ -92,6 +92,15 @@ public class UserDetailActivity extends BaseActivity implements EnrollmentAdapte
     }
 
     @Override
+    protected void onSyncFinished() {
+        super.onSyncFinished();
+        // Quando a sync manual (botão da toolbar) terminar, recarrega os dados
+        if (userId != null) {
+            viewModel.loadEnrollments(userId);
+        }
+    }
+
+    @Override
     public void onCheckInClick(EnrollmentWithEvent item) {
         if (item.enrollment.checkIn != null) {
             Toast.makeText(this, "Check-in já realizado.", Toast.LENGTH_SHORT).show();
@@ -107,18 +116,6 @@ public class UserDetailActivity extends BaseActivity implements EnrollmentAdapte
                 .setMessage("Evento: " + (item.event != null ? item.event.eventName : "Desconhecido"))
                 .setPositiveButton("Confirmar", (dialog, which) -> viewModel.performCheckIn(item.enrollment.id))
                 .setNegativeButton("Voltar", null)
-                .show();
-    }
-
-    @Override
-    public void onCancelClick(EnrollmentWithEvent item) {
-        if ("CANCELED".equals(item.enrollment.status)) return;
-
-        new AlertDialog.Builder(this)
-                .setTitle("Cancelar Inscrição")
-                .setMessage("Deseja cancelar a inscrição em " + (item.event != null ? item.event.eventName : "este evento") + "?")
-                .setPositiveButton("Sim, Cancelar", (dialog, which) -> viewModel.cancelEnrollment(item.enrollment.id))
-                .setNegativeButton("Não", null)
                 .show();
     }
 }

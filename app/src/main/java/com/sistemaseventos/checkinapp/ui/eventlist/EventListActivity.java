@@ -1,10 +1,11 @@
 package com.sistemaseventos.checkinapp.ui.eventlist;
 
 import android.os.Bundle;
-import android.widget.SearchView;
 import android.widget.Toast;
+// IMPORTANTE: Mudança na linha abaixo (de android.widget para androidx.appcompat.widget)
+import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
+// import androidx.appcompat.app.AppCompatActivity; // Já incluso via BaseActivity se preferir, ou mantenha
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -23,7 +24,9 @@ public class EventListActivity extends BaseActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_event_list);
 
+        // Pega o ID do usuário que veio da tela anterior (UserDetail)
         userId = getIntent().getStringExtra("USER_ID");
+
         viewModel = new ViewModelProvider(this).get(EventListViewModel.class);
 
         RecyclerView recyclerView = findViewById(R.id.recycler_events);
@@ -32,6 +35,7 @@ public class EventListActivity extends BaseActivity {
         adapter = new EventListAdapter(this::confirmEnroll);
         recyclerView.setAdapter(adapter);
 
+        // A busca agora usa o componente AndroidX correto
         SearchView searchView = findViewById(R.id.search_view);
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
@@ -46,16 +50,18 @@ public class EventListActivity extends BaseActivity {
             }
         });
 
+        // Observa a lista de eventos
         viewModel.events.observe(this, list -> adapter.setList(list));
 
+        // Observa o sucesso da inscrição para fechar a tela
         viewModel.enrollSuccess.observe(this, success -> {
             if (success) {
                 Toast.makeText(this, "Inscrição realizada!", Toast.LENGTH_SHORT).show();
-                finish(); // Volta para UserDetail
+                finish(); // Volta para a tela de Detalhes do Usuário para ver a lista atualizada
             }
         });
 
-        viewModel.search(""); // Carrega tudo inicialmente
+        viewModel.search(""); // Carrega todos os eventos inicialmente
     }
 
     private void confirmEnroll(EventEntity event) {

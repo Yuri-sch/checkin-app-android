@@ -44,79 +44,108 @@ public class UserRepository {
     }
 
     public UserEntity registerSimpleUser(String cpf, String email) {
-        SimpleUserRequest request = new SimpleUserRequest(cpf, email);
+        // Definimos um nome padrão pois o UserSyncDTO exige, mas o cadastro simples não pergunta
+        String defaultName = "Novo Usuário";
+
         try {
-            // Tenta cadastro online normal
-            Response<UserResponse> response = apiService.registerSimpleUser(request).execute();
+            // MUDANÇA: Agora usamos o DTO de Sincronização e a rota syncUser
+            // Isso evita o erro 400 (falta de senha) do /auth/register
+            UserSyncDTO syncDto = new UserSyncDTO(cpf, email, defaultName);
+
+            Response<UserResponse> response = apiService.syncUser(syncDto).execute();
+
             if (response.isSuccessful() && response.body() != null) {
                 UserEntity user = mapResponseToEntity(response.body());
                 user.isSynced = true;
                 userDao.upsert(user);
                 return user;
+            } else {
+                // Log de erro para debug (caso o sync falhe por outro motivo)
+                String errorMsg = response.errorBody() != null ? response.errorBody().string() : "Sem detalhes";
+                Log.e(TAG, "Falha no cadastro via Sync (Code " + response.code() + "): " + errorMsg);
             }
         } catch (Exception e) {
-            Log.e(TAG, "Offline: salvando cadastro localmente", e);
+            Log.e(TAG, "Offline ou Erro de Conexão: salvando localmente", e);
         }
 
-        // Se falhar ou estiver offline, salva localmente
+        // Se falhar a API ou estiver offline, salva localmente para sincronizar depois
         UserEntity offlineUser = new UserEntity();
         offlineUser.id = UUID.randomUUID().toString(); // ID Temporário
         offlineUser.cpf = cpf;
         offlineUser.email = email;
-        offlineUser.fullname = "Novo Usuário";
+        offlineUser.fullname = defaultName;
         offlineUser.complete = false;
-        offlineUser.isSynced = false;
+        offlineUser.isSynced = false; // Importante: marca como pendente
 
         userDao.upsert(offlineUser);
         return offlineUser;
     }
 
     // --- ATUALIZAÇÃO AQUI ---
-    public void syncPendingUsers() throws Exception {
+    public int syncPendingUsers() throws Exception {
+        int count = 0;
         List<UserEntity> pending = userDao.getUnsyncedUsers();
-        if (pending.isEmpty()) {
-            Log.d(TAG, "Nenhum usuário pendente para sincronizar.");
-            return;
-        }
+
+        if (pending.isEmpty()) return 0;
 
         for (UserEntity u : pending) {
             String oldTempId = u.id;
-            Log.d(TAG, "Tentando sincronizar usuário: " + u.cpf); // Log de início
+            Log.d(TAG, "Tentando sincronizar usuário: " + u.cpf);
 
             try {
                 UserSyncDTO syncDto = new UserSyncDTO(u.cpf, u.email, u.fullname);
                 Response<UserResponse> res = apiService.syncUser(syncDto).execute();
 
-                if (res.isSuccessful() && res.body() != null) {
-                    String realId = res.body().id;
+                // Lógica para tratar Sucesso (200/201) OU Conflito (409)
+                if (res.isSuccessful() || res.code() == 409) {
+                    UserResponse body = res.body();
 
-                    // 1. Atualiza dados locais
-                    u.isSynced = true;
-                    u.id = realId;
-                    if (res.body().fullname != null) u.fullname = res.body().fullname;
-
-                    // 2. Migra inscrições do ID temporário para o real
-                    enrollmentDao.migrateUserEnrollments(oldTempId, realId);
-
-                    // 3. Verifica se precisa deletar o temporário antigo para evitar duplicata no Room
-                    if (!oldTempId.equals(realId)) {
-                        // Opcional: deletar o registro antigo se o ID mudou
-                        // userDao.deleteById(oldTempId);
+                    // SE FOR 409: O body vem nulo ou com erro, então buscamos o usuário real
+                    if (res.code() == 409) {
+                        Log.d(TAG, "Usuário " + u.cpf + " já existe (409). Buscando ID real...");
+                        Response<UserResponse> fetchRes = apiService.findUserByCpf(u.cpf).execute();
+                        if (fetchRes.isSuccessful() && fetchRes.body() != null) {
+                            body = fetchRes.body();
+                        } else {
+                            Log.e(TAG, "Falha ao recuperar usuário existente: " + fetchRes.code());
+                            continue; // Pula para o próximo se não conseguir recuperar
+                        }
                     }
-                    userDao.upsert(u);
-                    Log.d(TAG, "SUCESSO: Usuário " + u.cpf + " sincronizado. Novo ID: " + realId);
+
+                    if (body != null) {
+                        String realId = body.id;
+
+                        // 1. Atualiza dados do objeto (mas calma na hora de salvar!)
+                        u.isSynced = true;
+                        u.fullname = body.fullname != null ? body.fullname : u.fullname;
+
+                        // 2. Migra inscrições do ID temporário para o real
+                        // (Isso conserta o erro 500 das inscrições)
+                        enrollmentDao.migrateUserEnrollments(oldTempId, realId);
+
+                        // 3. A CORREÇÃO MÁGICA:
+                        if (!oldTempId.equals(realId)) {
+                            // Deleta explicitamente o registro com ID ANTIGO
+                            userDao.deleteById(oldTempId);
+                        }
+
+                        // 4. Agora sim, atualizamos o ID no objeto e salvamos o NOVO registro
+                        u.id = realId;
+                        userDao.upsert(u);
+
+                        Log.d(TAG, "SUCESSO: Usuário sincronizado/recuperado. ID: " + realId);
+                        count++;
+                    }
 
                 } else {
-                    // *** AQUI ESTÁ O SEGREDO ***
-                    // Isso vai mostrar no Logcat se é 404 (Rota não existe), 403 (Permissão) ou 500 (Erro no servidor)
                     String errorBody = res.errorBody() != null ? res.errorBody().string() : "Sem detalhes";
                     Log.e(TAG, "ERRO API (" + res.code() + ") ao sincronizar " + u.cpf + ": " + errorBody);
                 }
             } catch (Exception e) {
-                // Adicione o 'e' aqui para ver a exceção completa no Logcat
                 Log.e(TAG, "EXCEÇÃO ao sincronizar " + u.cpf, e);
             }
         }
+        return count;
     }
     // ------------------------
 
@@ -129,5 +158,9 @@ public class UserRepository {
         entity.birthDate = response.birthDate;
         entity.complete = response.complete;
         return entity;
+    }
+
+    public List<UserEntity> getUnsyncedUsersList() {
+        return userDao.getUnsyncedUsers();
     }
 }

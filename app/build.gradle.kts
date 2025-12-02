@@ -57,4 +57,5 @@ dependencies {
     implementation(libs.lifecycle.livedata)
 
     implementation(libs.converter.scalars)
+    implementation(libs.logging.interceptor)
 }

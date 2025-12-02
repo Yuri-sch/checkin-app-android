@@ -7,9 +7,11 @@ import android.widget.EditText;
 import android.widget.Toast;
 import androidx.lifecycle.ViewModelProvider;
 import com.sistemaseventos.checkinapp.R;
+import com.sistemaseventos.checkinapp.sync.SyncManager;
 import com.sistemaseventos.checkinapp.ui.BaseActivity;
 import com.sistemaseventos.checkinapp.ui.register.RegisterActivity;
 import com.sistemaseventos.checkinapp.ui.userdetail.UserDetailActivity;
+import com.sistemaseventos.checkinapp.util.CpfValidator;
 
 public class CheckinActivity extends BaseActivity {
 
@@ -21,18 +23,30 @@ public class CheckinActivity extends BaseActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_checkin);
 
+        // Dispara sync inicial em background
+        new SyncManager(this).syncAll(null); // Passa null no listener se não quiser feedback visual
+
         viewModel = new ViewModelProvider(this).get(CheckinViewModel.class);
 
         cpfInput = findViewById(R.id.cpf_input);
         Button searchButton = findViewById(R.id.search_button);
 
         searchButton.setOnClickListener(v -> {
-            String cpf = cpfInput.getText().toString().trim();
-            if (!cpf.isEmpty()) {
-                viewModel.searchUser(cpf);
-            } else {
+            String rawCpf = cpfInput.getText().toString().replaceAll("[^0-9]", "");
+
+            if (rawCpf.isEmpty()) {
                 Toast.makeText(this, "Digite um CPF", Toast.LENGTH_SHORT).show();
+                return;
             }
+
+            // Validação Lógica
+            if (!CpfValidator.isValid(rawCpf)) {
+                Toast.makeText(this, "CPF Inválido! Verifique os números.", Toast.LENGTH_LONG).show();
+                return; // Interrompe a execução aqui
+            }
+
+            // Se passou, chama a busca com o CPF limpo
+            viewModel.searchUser(rawCpf);
         });
 
         setupObservers();

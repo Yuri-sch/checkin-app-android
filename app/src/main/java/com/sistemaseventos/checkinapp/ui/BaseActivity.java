@@ -2,18 +2,20 @@ package com.sistemaseventos.checkinapp.ui;
 
 import android.os.Bundle;
 import android.view.View;
+import android.widget.Button; // Alterado de ImageButton para Button
 import android.widget.FrameLayout;
-import android.widget.ImageButton;
 import android.widget.ProgressBar;
+import android.widget.Toast;
 import androidx.annotation.LayoutRes;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 import com.sistemaseventos.checkinapp.R;
 import com.sistemaseventos.checkinapp.sync.SyncManager;
 
 public abstract class BaseActivity extends AppCompatActivity {
 
     private ProgressBar loading;
-    private ImageButton btnSync;
+    private Button btnSync; // Agora é um Button (texto)
     private SyncManager syncManager;
 
     @Override
@@ -28,6 +30,12 @@ public abstract class BaseActivity extends AppCompatActivity {
     }
 
     private void setupToolbar(View root) {
+        Toolbar toolbar = root.findViewById(R.id.toolbar);
+        if (toolbar != null) {
+            setSupportActionBar(toolbar);
+        }
+
+        // Busca o botão pelo ID (agora é um Button no XML)
         btnSync = root.findViewById(R.id.btn_sync_manual);
         loading = root.findViewById(R.id.progress_sync_loading);
 
@@ -39,23 +47,41 @@ public abstract class BaseActivity extends AppCompatActivity {
     protected void requestManualSync() {
         if (loading != null) loading.setVisibility(View.VISIBLE);
         if (btnSync != null) btnSync.setEnabled(false);
+        // btnSync.setText("Enviando..."); // Opcional: Mudar texto durante sync
 
         syncManager.syncAll(new SyncManager.OnSyncListener() {
             @Override
-            public void onSyncComplete() {
+            public void onSyncComplete(int users, int enrollments) {
                 if (loading != null) loading.setVisibility(View.GONE);
-                if (btnSync != null) btnSync.setEnabled(true);
-                onSyncFinished(); // Hook para subclasses atualizarem a tela
+                if (btnSync != null) {
+                    btnSync.setEnabled(true);
+                    // btnSync.setText("SINCRONIZAR"); // Volta texto original
+                }
+
+                String msg;
+                if (users == 0 && enrollments == 0) {
+                    msg = "Nada novo a sincronizar!";
+                } else {
+                    msg = "Sucesso! Enviados: " + users + " usuários e " + enrollments + " inscrições.";
+                }
+                Toast.makeText(BaseActivity.this, msg, Toast.LENGTH_LONG).show();
+
+                // Avisa a Activity filha para atualizar a lista
+                onSyncFinished();
             }
 
             @Override
             public void onSyncError(String error) {
                 if (loading != null) loading.setVisibility(View.GONE);
-                if (btnSync != null) btnSync.setEnabled(true);
+                if (btnSync != null) {
+                    btnSync.setEnabled(true);
+                    // btnSync.setText("SINCRONIZAR");
+                }
+                // O SyncManager já exibe Toast de erro
             }
         });
     }
 
-    // Método vazio que as activities filhas podem sobrescrever para atualizar a lista após o sync
+    // Método gancho para as activities filhas recarregarem dados
     protected void onSyncFinished() {}
 }

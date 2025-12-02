@@ -115,100 +115,138 @@ public class EnrollmentRepository {
         return true;
     }
 
-    // Sync Manual
-    public void syncPendingEnrollments() throws Exception {
+    public int syncPendingEnrollments() throws Exception {
+        int count = 0; // 1. Iniciamos o contador
         List<EnrollmentEntity> pending = enrollmentDao.getUnsyncedEnrollments();
 
         if (pending.isEmpty()) {
             Log.d(TAG, "Nenhuma inscrição pendente para sincronizar.");
-            return;
+            return 0;
         }
 
         for (EnrollmentEntity e : pending) {
-            Log.d(TAG, "Sincronizando item: " + e.id + " | User: " + e.usersId + " | Event: " + e.eventsId);
+            Log.d(TAG, "Sincronizando item: " + e.id);
+            boolean itemSuccess = false; // Flag para saber se DESTE item deu certo
 
             try {
-                // PASSO 1: Se a inscrição nunca foi enviada ao servidor (ID Temporário), cria ela primeiro
-                // Verificamos isso checando se o ID é longo (UUID) e isSynced é falso,
-                // ou simplesmente confiando na flag isSynced = false que definimos na criação offline
-                boolean isNewRegistration = !e.isSynced;
+                // --- PASSO 1: CRIAR INSCRIÇÃO (Se for nova/offline) ---
+                // Se isSynced for false e o ID parecer temporário (ou confiamos na flag isSynced)
+                boolean isNewRegistration = !e.isSynced && e.status != null && !e.status.equals("CANCELED");
 
-                if (isNewRegistration) {
-                    Log.d(TAG, "Criando inscrição nova no servidor...");
-                    CreateEnrollmentRequest req = new CreateEnrollmentRequest(e.usersId, e.eventsId);
-                    Response<EnrollmentResponse> res = apiService.createEnrollment(req).execute();
+                // Nota: Se estiver CANCELADO, nem tentamos criar de novo, vamos direto pro cancelamento no passo 2
 
-                    if (res.isSuccessful() && res.body() != null) {
-                        // Importante: O servidor retornou o ID REAL
-                        String realId = res.body().id;
+                // Mas precisamos diferenciar: "Nunca foi pro servidor" vs "Já foi pro servidor mas editei localmente"
+                // Como seu app cria IDs UUID longos, difícil distinguir pelo ID.
+                // Vamos assumir: Se não tem status "CONFIRMED" do servidor e isSynced=false, é nova.
+                // Para simplificar, vou manter sua lógica: se !isSynced tenta criar, a menos que seja só update.
+                // O ideal é tentar criar se ela não existir no servidor.
+                // Se o servidor retornar 409 (Conflict) ou 200 com ID, aceitamos.
 
-                        // Atualizamos o objeto local
-                        // Removemos o antigo (ID temporário) e inserimos o novo
-                        enrollmentDao.delete(e);
+                // Simplificação segura: Se a inscrição foi criada offline, ela precisa subir.
+                if (!e.isSynced) {
+                    // Verificação extra para não recriar inscrições que só tiveram check-in pendente
+                    // (O ideal seria ter uma flag "isCreatedOffline", mas vamos tentar criar)
 
-                        EnrollmentEntity synced = new EnrollmentEntity();
-                        synced.id = realId;
+                    // Se já tiver um check-in mas sem ID real, é criação nova com check-in.
+                    // Vamos tentar criar.
 
-                        // Se o servidor devolver nulo (por erro de nome JSON), mantemos o ID local que sabemos que está certo
-                        if (res.body().eventsId != null) {
-                            synced.eventsId = res.body().eventsId;
+                    try {
+                        CreateEnrollmentRequest req = new CreateEnrollmentRequest(e.usersId, e.eventsId);
+                        // Chamada síncrona
+                        Response<EnrollmentResponse> res = apiService.createEnrollment(req).execute();
+
+                        if (res.isSuccessful() && res.body() != null) {
+                            String realId = res.body().id; // ID que veio do servidor
+
+                            // Remove a inscrição temporária antiga
+                            enrollmentDao.delete(e);
+
+                            // Cria o objeto novo e limpo para salvar
+                            EnrollmentEntity synced = new EnrollmentEntity();
+                            synced.id = realId;
+
+                            // CORREÇÃO DOS DADOS DO EVENTO (Para não ficar invisível)
+                            if (res.body().eventsId != null) {
+                                synced.eventsId = res.body().eventsId;
+                            } else {
+                                synced.eventsId = e.eventsId; // Mantém o nosso ID local
+                            }
+
+                            // CORREÇÃO DOS DADOS DO USUÁRIO
+                            if (res.body().usersId != null) {
+                                synced.usersId = res.body().usersId;
+                            } else {
+                                synced.usersId = e.usersId;
+                            }
+
+                            // Mantém os dados de estado
+                            synced.status = res.body().status;
+
+                            // Importante: Se tínhamos um check-in local, PRESERVAMOS ele no objeto novo
+                            // para o Passo 2 poder enviar o check-in logo em seguida
+                            if (e.checkIn != null) {
+                                synced.checkIn = e.checkIn;
+                            } else {
+                                synced.checkIn = res.body().checkIn;
+                            }
+
+                            synced.isSynced = true; // Marcamos como sincronizado a CRIAÇÃO
+
+                            enrollmentDao.upsert(synced);
+
+                            // Atualiza a variável 'e' para apontar para o novo objeto com ID real
+                            // Assim o Passo 2 (Check-in) usa o ID certo
+                            e = synced;
+
+                            itemSuccess = true; // Contamos como sucesso
+                            Log.d(TAG, "Inscrição criada. ID Real: " + realId);
                         } else {
-                            synced.eventsId = e.eventsId; // Mantém o ID original do evento
+                            // Se deu erro 400/409, talvez já exista?
+                            // Por segurança, logamos e se falhar a criação, não tentamos check-in
+                            String msg = res.errorBody() != null ? res.errorBody().string() : "";
+                            Log.e(TAG, "Falha ao criar (Code " + res.code() + "): " + msg);
+                            // Se falhou criar, continue para o próximo item do loop principal
+                            continue;
                         }
-
-                        // Faz o mesmo para o usersId por segurança
-                        if (res.body().usersId != null) {
-                            synced.usersId = res.body().usersId;
-                        } else {
-                            synced.usersId = e.usersId;
-                        }
-
-                        e.id = realId; // Agora 'e' tem o ID real
-                        e.isSynced = true;
-                        e.status = res.body().status; // Geralmente volta CONFIRMED
-
-                        enrollmentDao.upsert(e);
-                        Log.d(TAG, "Inscrição criada com sucesso. Novo ID: " + realId);
-                    } else {
-                        String errorMsg = res.errorBody() != null ? res.errorBody().string() : "Sem detalhes";
-                        Log.e(TAG, "Falha ao criar inscrição (Erro " + res.code() + "): " + errorMsg);
-                        continue; // Pula para o próximo item se falhar a criação
+                    } catch (Exception ex) {
+                        Log.e(TAG, "Erro de conexão ao criar: " + ex.getMessage());
+                        continue;
                     }
                 }
 
-                // PASSO 2: Agora que garantimos que a inscrição existe no servidor (ou já existia),
-                // verificamos se precisa de Check-in ou Cancelamento.
+                // --- PASSO 2: AÇÕES SECUNDÁRIAS (Check-in ou Cancelar) ---
+                // Agora 'e' tem o ID real (seja porque veio do servidor agora ou já tinha)
 
-                // Se estiver cancelado localmente
                 if ("CANCELED".equals(e.status)) {
-                    Log.d(TAG, "Enviando cancelamento...");
+                    Log.d(TAG, "Enviando cancelamento para: " + e.id);
                     Response<EnrollmentResponse> res = apiService.cancelRegistration(e.id).execute();
                     if (res.isSuccessful()) {
                         enrollmentDao.cancelEnrollmentStatus(e.id, true);
-                    } else {
-                        Log.e(TAG, "Erro ao cancelar no servidor: " + res.code());
+                        itemSuccess = true;
                     }
                 }
-                // Se tiver data de check-in local, mas o status de sync do check-in ainda não foi confirmado?
-                // Nota: Seu banco não tem uma flag específica "isCheckInSynced",
-                // então assumimos que se tem data e estamos no loop de pendentes, tentamos enviar.
                 else if (e.checkIn != null) {
-                    Log.d(TAG, "Enviando Check-in...");
+                    // Se tem data de check-in, tentamos confirmar no servidor
+                    Log.d(TAG, "Enviando Check-in para: " + e.id);
                     Response<EnrollmentResponse> res = apiService.performCheckIn(e.id).execute();
                     if (res.isSuccessful()) {
                         enrollmentDao.updateCheckInStatus(e.id, e.checkIn, true);
-                        Log.d(TAG, "Check-in sincronizado!");
+                        itemSuccess = true;
                     } else {
-                        // Pode dar 400 se já tiver feito check-in, tudo bem ignorar ou tratar
-                        String msg = res.errorBody() != null ? res.errorBody().string() : "";
-                        Log.e(TAG, "Erro ao enviar check-in (" + res.code() + "): " + msg);
+                        Log.e(TAG, "Erro check-in: " + res.code());
                     }
                 }
 
+                // 3. Se fizemos alguma operação com sucesso, incrementa o contador geral
+                if (itemSuccess) {
+                    count++;
+                }
+
             } catch (Exception ex) {
-                // LOG COMPLETO DA EXCEÇÃO
-                Log.e(TAG, "EXCEÇÃO CRÍTICA ao sincronizar inscrição " + e.id, ex);
+                Log.e(TAG, "EXCEÇÃO CRÍTICA no item " + e.id, ex);
             }
         }
+
+        return count; // Retorna o total processado para o Toast
     }
 }

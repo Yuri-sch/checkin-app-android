@@ -1,45 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.appcompat.widget.Toolbar xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/toolbar"
     android:layout_width="match_parent"
-    android:layout_height="56dp"
-    android:background="#6200EE"
-    android:paddingStart="16dp"
-    android:paddingEnd="16dp">
+    android:layout_height="?attr/actionBarSize"
+    android:background="?attr/colorPrimary"
+    android:elevation="4dp"
+    android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
+    app:popupTheme="@style/ThemeOverlay.AppCompat.Light">
 
-    <TextView
-        android:id="@+id/text_app_title"
+    <LinearLayout
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="App Check-in"
-        android:textColor="@android:color/white"
-        android:textSize="20sp"
-        android:textStyle="bold"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:layout_height="match_parent"
+        android:layout_gravity="end"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
 
-    <ImageButton
-        android:id="@+id/btn_sync_manual"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:src="@android:drawable/ic_popup_sync"
-        app:tint="@android:color/white"
-        android:padding="8dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        <ProgressBar
+            android:id="@+id/progress_sync_loading"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginEnd="8dp"
+            android:indeterminateTint="@android:color/white"
+            android:visibility="gone" />
 
-    <ProgressBar
-        android:id="@+id/progress_sync_loading"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
-        android:visibility="gone"
-        android:indeterminateTint="@android:color/white"
-        android:layout_marginEnd="16dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/btn_sync_manual"
-        app:layout_constraintTop_toTopOf="parent"/>
+        <Button
+            android:id="@+id/btn_sync_manual"
+            style="@style/Widget.AppCompat.Button.Borderless"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="SINCRONIZAR"
+            android:textColor="@android:color/white"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:paddingHorizontal="12dp"
+            android:minWidth="0dp"
+            android:background="?attr/selectableItemBackgroundBorderless" />
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+    </LinearLayout>
+
+</androidx.appcompat.widget.Toolbar>
