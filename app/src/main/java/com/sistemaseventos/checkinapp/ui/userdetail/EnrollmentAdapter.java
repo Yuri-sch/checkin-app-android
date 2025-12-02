@@ -48,27 +48,34 @@ public class EnrollmentAdapter extends RecyclerView.Adapter<EnrollmentAdapter.Vi
         // 1. Nome do Evento
         holder.eventName.setText(item.event != null ? item.event.eventName : "Evento ID: " + item.enrollment.eventsId);
 
-        // 2. Status do Check-in (Lógica Visual Clara)
-        if (item.enrollment.checkIn != null) {
+        if ("CANCELED".equals(item.enrollment.status)) {
+            holder.checkinStatus.setText("Inscrição Cancelada");
+            holder.checkinStatus.setTextColor(Color.RED); // Texto vermelho
+            holder.btnCheckin.setVisibility(View.GONE);   // ESCONDE o botão
+        }
+        // Se não cancelado, verifica se já fez check-in
+        else if (item.enrollment.checkIn != null) {
             SimpleDateFormat sdf = new SimpleDateFormat("dd/MM HH:mm", Locale.getDefault());
             holder.checkinStatus.setText("Check-in: REALIZADO (" + sdf.format(item.enrollment.checkIn) + ")");
             holder.checkinStatus.setTextColor(Color.parseColor("#2E7D32")); // Verde Escuro
-            holder.btnCheckin.setVisibility(View.GONE); // Esconde botão se já fez
-        } else {
+            holder.btnCheckin.setVisibility(View.GONE); // Esconde botão pois já fez
+        }
+        // Se não cancelado e sem check-in, então está pendente
+        else {
             holder.checkinStatus.setText("Check-in: PENDENTE");
             holder.checkinStatus.setTextColor(Color.parseColor("#EF6C00")); // Laranja
-            holder.btnCheckin.setVisibility(View.VISIBLE);
+            holder.btnCheckin.setVisibility(View.VISIBLE); // MOSTRA o botão
             holder.btnCheckin.setEnabled(true);
             holder.btnCheckin.setText("Confirmar Presença");
         }
 
-        // 3. Status de Sincronização
+        // 3. Status de Sincronização (Permanece igual)
         if (item.enrollment.isSynced) {
             holder.syncStatus.setText("Sincronização: OK (Salvo na Nuvem)");
-            holder.syncStatus.setTextColor(Color.parseColor("#757575")); // Cinza (Discreto)
+            holder.syncStatus.setTextColor(Color.parseColor("#757575"));
         } else {
             holder.syncStatus.setText("⚠ Sincronização: PENDENTE DE ENVIO");
-            holder.syncStatus.setTextColor(Color.RED); // Vermelho (Alerta)
+            holder.syncStatus.setTextColor(Color.RED);
         }
 
         // Ação do Botão
