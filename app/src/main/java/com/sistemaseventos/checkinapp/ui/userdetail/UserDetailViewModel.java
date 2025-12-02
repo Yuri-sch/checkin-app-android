@@ -5,17 +5,17 @@ import androidx.annotation.NonNull;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
-import com.sistemaseventos.checkinapp.data.db.entity.EnrollmentWithEvent; // Novo import
+import com.sistemaseventos.checkinapp.data.db.entity.EnrollmentWithEvent;
+import com.sistemaseventos.checkinapp.data.db.entity.UserEntity; // Importe isso
 import com.sistemaseventos.checkinapp.data.repository.EnrollmentRepository;
-
-import java.util.Collections;
+import com.sistemaseventos.checkinapp.data.repository.UserRepository; // Importe isso
 import java.util.List;
 
 public class UserDetailViewModel extends AndroidViewModel {
 
     private EnrollmentRepository enrollmentRepository;
+    private UserRepository userRepository; // Adicione o repo de usuário
 
-    // Agora lista EnrollmentWithEvent
     private MutableLiveData<List<EnrollmentWithEvent>> _enrollments = new MutableLiveData<>();
     public LiveData<List<EnrollmentWithEvent>> enrollments = _enrollments;
 
@@ -25,43 +25,27 @@ public class UserDetailViewModel extends AndroidViewModel {
     public UserDetailViewModel(@NonNull Application application) {
         super(application);
         enrollmentRepository = new EnrollmentRepository(application);
+        userRepository = new UserRepository(application); // Inicialize aqui
     }
 
     public void loadEnrollments(String userId) {
         new Thread(() -> {
-            // Busca com JOIN
             List<EnrollmentWithEvent> list = enrollmentRepository.getEnrollmentsWithEventsForUser(userId);
-
-            list.sort((item1, item2) -> {
-                int p1 = getPriority(item1);
-                int p2 = getPriority(item2);
-
-                if (p1 != p2) {
-                    return Integer.compare(p1, p2);
-                }
-
-                if (item1.event != null && item2.event != null && item1.event.eventDate != null && item2.event.eventDate != null) {
-                    return item1.event.eventDate.compareTo(item2.event.eventDate);
-                }
-
-                return 0;
-            });
             _enrollments.postValue(list);
         }).start();
     }
 
-    private int getPriority(EnrollmentWithEvent item) {
-        // Se for cancelado, vai pro final (Peso 2)
-        if ("CANCELED".equals(item.enrollment.status)) {
-            return 2;
-        }
-        // Se já fez check-in, fica no meio (Peso 1)
-        if (item.enrollment.checkIn != null) {
-            return 1;
-        }
-        // Se está ativo e sem check-in, é prioridade total (Peso 0)
-        return 0;
+    // --- NOVO MÉTODO PARA RECUPERAR ID APÓS SYNC ---
+    public LiveData<UserEntity> getUserByCpf(String cpf) {
+        MutableLiveData<UserEntity> result = new MutableLiveData<>();
+        new Thread(() -> {
+            // Busca no repositório (que vai consultar API ou Banco Local)
+            UserEntity user = userRepository.findUserByCpf(cpf);
+            result.postValue(user);
+        }).start();
+        return result;
     }
+    // -----------------------------------------------
 
     public void performCheckIn(String enrollmentId) {
         new Thread(() -> {
@@ -70,6 +54,7 @@ public class UserDetailViewModel extends AndroidViewModel {
         }).start();
     }
 
+    // Método de cancelamento removido anteriormente (se ainda existir, pode manter ou remover)
     public void cancelEnrollment(String enrollmentId) {
         new Thread(() -> {
             boolean success = enrollmentRepository.cancelEnrollment(enrollmentId);

@@ -94,9 +94,25 @@ public class UserDetailActivity extends BaseActivity implements EnrollmentAdapte
     @Override
     protected void onSyncFinished() {
         super.onSyncFinished();
-        // Quando a sync manual (botão da toolbar) terminar, recarrega os dados
-        if (userId != null) {
-            viewModel.loadEnrollments(userId);
+
+        // CORREÇÃO: O ID do usuário pode ter mudado durante a sincronização (de Temp para Real).
+        // Usamos o CPF (que é constante) para descobrir o ID atual antes de recarregar a lista.
+        String userCpf = getIntent().getStringExtra("USER_CPF");
+
+        if (userCpf != null) {
+            // Busca o usuário atualizado
+            viewModel.getUserByCpf(userCpf).observe(this, user -> {
+                if (user != null) {
+                    // Atualiza a variável local userId com o ID oficial do banco/API
+                    this.userId = user.id;
+
+                    // Agora sim carrega as inscrições com o ID certo
+                    viewModel.loadEnrollments(this.userId);
+                }
+            });
+        } else {
+            // Fallback caso não tenha CPF (raro)
+            if (userId != null) viewModel.loadEnrollments(userId);
         }
     }
 
