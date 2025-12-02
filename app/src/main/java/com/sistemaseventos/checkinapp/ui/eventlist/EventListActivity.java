@@ -14,7 +14,6 @@ import com.sistemaseventos.checkinapp.data.db.entity.EventEntity;
 import com.sistemaseventos.checkinapp.ui.BaseActivity;
 
 public class EventListActivity extends BaseActivity {
-
     private EventListViewModel viewModel;
     private EventListAdapter adapter;
     private String userId;
@@ -52,6 +51,15 @@ public class EventListActivity extends BaseActivity {
 
         // Observa a lista de eventos
         viewModel.events.observe(this, list -> adapter.setList(list));
+        // Observa o Mapa de Status em vez da lista de IDs
+        viewModel.enrollmentStatusMap.observe(this, map -> {
+            adapter.setEnrollmentStatus(map);
+        });
+
+        // A chamada inicial continua a mesma
+        if (userId != null) {
+            viewModel.loadUserEnrollments(userId);
+        }
 
         // Observa o sucesso da inscrição para fechar a tela
         viewModel.enrollSuccess.observe(this, success -> {

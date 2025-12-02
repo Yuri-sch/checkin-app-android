@@ -10,14 +10,17 @@ import com.sistemaseventos.checkinapp.R;
 import com.sistemaseventos.checkinapp.data.db.entity.EventEntity;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class EventListAdapter extends RecyclerView.Adapter<EventListAdapter.ViewHolder> {
-
     private List<EventEntity> list = new ArrayList<>();
+    private List<String> enrolledEventIds = new ArrayList<>();
     private OnItemClickListener listener;
     private SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
+    private Map<String, String> eventStatusMap = new HashMap<>();
 
     public interface OnItemClickListener {
         void onItemClick(EventEntity item);
@@ -29,6 +32,11 @@ public class EventListAdapter extends RecyclerView.Adapter<EventListAdapter.View
 
     public void setList(List<EventEntity> list) {
         this.list = list;
+        notifyDataSetChanged();
+    }
+
+    public void setEnrollmentStatus(Map<String, String> statusMap) {
+        this.eventStatusMap = statusMap;
         notifyDataSetChanged();
     }
 
@@ -62,7 +70,26 @@ public class EventListAdapter extends RecyclerView.Adapter<EventListAdapter.View
             holder.date.setText("");
         }
 
-        holder.itemView.setOnClickListener(v -> listener.onItemClick(item));
+        // Verifica qual o status desse evento para o usuário (pode ser null se não tiver)
+        String status = eventStatusMap.get(item.id);
+
+        // Bloquear SÓ se tiver status E não for cancelado
+        boolean isActiveEnrollment = (status != null && !"CANCELED".equals(status));
+
+        if (isActiveEnrollment) {
+            holder.itemView.setAlpha(0.5f);
+            holder.name.setText(item.eventName + " (Já Inscrito)");
+            holder.itemView.setOnClickListener(null); // Remove o clique
+        } else {
+            holder.itemView.setAlpha(1.0f);
+            if ("CANCELED".equals(status)) {
+                holder.name.setText(item.eventName + " (Reinscrever)");
+            } else {
+                holder.name.setText(item.eventName);
+            }
+
+            holder.itemView.setOnClickListener(v -> listener.onItemClick(item));
+        }
     }
 
     @Override
